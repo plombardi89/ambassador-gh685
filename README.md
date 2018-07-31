@@ -6,7 +6,7 @@ As an end user I want to deploy Ambassador and the following are requirements:
 
 1. I am deploying on AWS
 1. I MUST terminate SSL/TLS at my Elastic Load Balancer.
-2. I MUST support both HTTP (:80) and HTTPS (:443) traffic. The HTTP (:80) traffic MUST BE redirected to HTTPS (:443).
+2. I MUST support both HTTP (:80) and HTTPS (:443) traffic, further, The HTTP (:80) traffic MUST BE redirected to HTTPS (:443).
 3. I MUST support websocket traffic (and therefore MUST use a L4 listener on the ELB)
 4. I MUST receive the **REAL** client IP address at my backend (and there MUST use the Proxy Protocol)
 
@@ -118,7 +118,7 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
         app: ambassador
     ```
 
-1. `export LB_ADDR=$(kubectl get svc ambassador-public -n gh685 -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+1. `export LB_ADDR=$(kubectl get svc ambassador-public -n gh685 -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')`
 2. `curl -k -v https://$LB_ADDR`
 
     **GOOD:** You should get a TLS handshake and that's great:
@@ -297,7 +297,7 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
         app: ambassador
     ```
     
-1. `export LB_ADDR=$(kubectl get svc ambassador-public -n gh685 -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+1. `export LB_ADDR=$(kubectl get svc ambassador-public -n gh685 -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')`
 2. `curl -k -v https://$LB_ADDR`
 
     ```text
