@@ -1,0 +1,212 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ambassador-public
+  namespace: gh685
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:914373874199:certificate/1d16f0a1-abd5-44b3-8da5-5e06c843fd3d"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Module
+      name: ambassador
+      config:
+        use_proxy_proto: false
+        use_remote_address: false
+
+      ---
+      apiVersion: ambassador/v1
+      kind: Module
+      name: tls
+      config:
+        server:
+          enabled: false
+          redirect_cleartext_from: 80
+        client:
+          enabled: false
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  - name: https
+    port: 443
+    targetPort: 80
+  selector:
+    app: ambassador
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ambassador
+  namespace: gh685
+  labels:
+    app: ambassador
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ambassador
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: ambassador
+    spec:
+      serviceAccountName: ambassador
+      containers:
+        - name: ambassador
+          image: quay.io/datawire/ambassador:0.37.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: 1
+              memory: 400Mi
+            requests:
+              cpu: 200m
+              memory: 100Mi
+          env:
+          - name: AMBASSADOR_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: SCOUT_DISABLE
+            value: "1"
+          livenessProbe:
+            httpGet:
+              path: /ambassador/v0/check_alive
+              port: 8877
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /ambassador/v0/check_ready
+              port: 8877
+            initialDelaySeconds: 10
+            periodSeconds: 5
+        - name: statsd
+          image: quay.io/datawire/statsd:0.37.0
+      restartPolicy: Always
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ambassador
+  namespace: gh685
+rules:
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["create", "update", "patch", "get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ambassador
+  namespace: gh685
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: ambassador
+subjects:
+- kind: ServiceAccount
+  name: ambassador
+  namespace: gh685
+roleRef:
+  kind: ClusterRole
+  name: ambassador
+  apiGroup: rbac.authorization.k8s.io
+    
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: ambassador-admin
+  name: ambassador-admin
+  namespace: gh685
+spec:
+  type: ClusterIP
+  ports:
+  - name: ambassador-admin
+    port: 8877
+    targetPort: 8877
+  selector:
+    app: ambassador
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: gh685
+  labels:
+    app: backend
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: backend-http
+      prefix: /
+      service: backend
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: backend-websocket
+      prefix: /ws
+      rewrite: /ws
+      use_websocket: true
+      service: backend
+spec:
+  type: ClusterIP
+  ports:
+    - name: http-api
+      port: 80
+      targetPort: http-api
+  selector:
+    app: backend
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: gh685
+  labels:
+    app: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: quay.io/datawire/conntest:latest
+          ports:
+            - name: http-api
+              containerPort: 7000
