@@ -124,73 +124,73 @@ spec:
     **GOOD:** You should get a TLS handshake and that's great:
     
     ```text
-    curl -k -v https://$LB_ADDR
-    * Rebuilt URL to: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
-    *   Trying 34.234.177.126...
-    * TCP_NODELAY set
-    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.234.177.126) port 443 (#0)
-    * ALPN, offering h2
-    * ALPN, offering http/1.1
-    * Cipher selection: PROFILE=SYSTEM
-    * successfully set certificate verify locations:
-    *   CAfile: /etc/pki/tls/certs/ca-bundle.crt
-    CApath: none
-    * TLSv1.2 (OUT), TLS handshake, Client hello (1):
-    * TLSv1.2 (IN), TLS handshake, Server hello (2):
-    * TLSv1.2 (IN), TLS handshake, Certificate (11):
-    * TLSv1.2 (IN), TLS handshake, Server key exchange (12):
-    * TLSv1.2 (IN), TLS handshake, Server finished (14):
-    * TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
-    * TLSv1.2 (OUT), TLS change cipher, Client hello (1):
-    * TLSv1.2 (OUT), TLS handshake, Finished (20):
-    * TLSv1.2 (IN), TLS handshake, Finished (20):
-    * SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
-    * ALPN, server did not agree to a protocol
-    * Server certificate:
-    *  subject: CN=*.getambassador.io
-    *  start date: May 29 00:00:00 2018 GMT
-    *  expire date: Jun 29 12:00:00 2019 GMT
-    *  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
-    *  SSL certificate verify ok.
-    > GET / HTTP/1.1
-    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
-    > User-Agent: curl/7.55.1
-    > Accept: */*
-    > 
-    < HTTP/1.1 200 OK
-    < date: Tue, 31 Jul 2018 21:45:15 GMT
-    < server: envoy
-    < content-type: application/json;charset=utf-8
-    < content-length: 764
-    < x-envoy-upstream-service-time: 6
-    < 
-    {
-    "host" : "backend-6f77f444c4-2pn79",
-    "request" : {
-        "method" : "GET",
-        "path" : "/",
-        "queryParams" : {
-        "" : [ "" ]
-        },
-        "headers" : {
-        "x-request-id" : "3bf7271e-d8f3-4640-ad41-5fec6034d5c3",
-        "x-envoy-external-address" : "65.217.185.138",
-        "Accept" : "*/*",
-        "User-Agent" : "curl/7.55.1",
-        "X-Forwarded-Proto" : "http",
-        "X-Forwarded-For" : "65.217.185.138",
-        "Host" : "aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com",
-        "x-envoy-expected-rq-timeout-ms" : "3000",
-        "Content-Length" : "0",
-        "x-envoy-original-path" : "/"
-        },
-        "remoteAddress" : "100.105.109.197",
-        "remotePort" : 60630,
-        "remoteHost" : "100.105.109.197",
-        "remoteUser" : null
-    }
-    * Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
-    }
+curl -k -v https://$LB_ADDR
+* Rebuilt URL to: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+*   Trying 34.234.177.126...
+* TCP_NODELAY set
+* Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.234.177.126) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* Cipher selection: PROFILE=SYSTEM
+* successfully set certificate verify locations:
+*   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server did not agree to a protocol
+* Server certificate:
+*  subject: CN=*.getambassador.io
+*  start date: May 29 00:00:00 2018 GMT
+*  expire date: Jun 29 12:00:00 2019 GMT
+*  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
+*  SSL certificate verify ok.
+> GET / HTTP/1.1
+> Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+> User-Agent: curl/7.55.1
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< date: Tue, 31 Jul 2018 21:45:15 GMT
+< server: envoy
+< content-type: application/json;charset=utf-8
+< content-length: 764
+< x-envoy-upstream-service-time: 6
+< 
+{
+"host" : "backend-6f77f444c4-2pn79",
+"request" : {
+    "method" : "GET",
+    "path" : "/",
+    "queryParams" : {
+    "" : [ "" ]
+    },
+    "headers" : {
+    "x-request-id" : "3bf7271e-d8f3-4640-ad41-5fec6034d5c3",
+    "x-envoy-external-address" : "65.217.185.138",
+    "Accept" : "*/*",
+    "User-Agent" : "curl/7.55.1",
+    "X-Forwarded-Proto" : "http",
+    "X-Forwarded-For" : "65.217.185.138",
+    "Host" : "aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com",
+    "x-envoy-expected-rq-timeout-ms" : "3000",
+    "Content-Length" : "0",
+    "x-envoy-original-path" : "/"
+    },
+    "remoteAddress" : "100.105.109.197",
+    "remotePort" : 60630,
+    "remoteHost" : "100.105.109.197",
+    "remoteUser" : null
+}
+* Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+}
     ```
 
 3. `curl -v http://$LB_ADDR
@@ -198,48 +198,48 @@ spec:
     **BAD:** No TLS handshake occurred
     
     ```text
-    curl -k -v http://$LB_ADDR
-    * Rebuilt URL to: http://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
-    *   Trying 52.0.246.212...
-    * TCP_NODELAY set
-    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (52.0.246.212) port 80 (#0)
-    > GET / HTTP/1.1
-    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
-    > User-Agent: curl/7.55.1
-    > Accept: */*
-    > 
-    < HTTP/1.1 200 OK
-    < date: Tue, 31 Jul 2018 21:46:37 GMT
-    < server: envoy
-    < content-type: application/json;charset=utf-8
-    < content-length: 764
-    < x-envoy-upstream-service-time: 4
-    < 
-    {
-    "host" : "backend-6f77f444c4-2pn79",
-    "request" : {
-        "method" : "GET",
-        "path" : "/",
-        "queryParams" : {
-        "" : [ "" ]
-        },
-        "headers" : {
-        "x-request-id" : "100d49ee-21ce-4973-b481-a634dff93838",
-        "x-envoy-external-address" : "104.129.66.226",
-        "Accept" : "*/*",
-        "User-Agent" : "curl/7.55.1",
-        "X-Forwarded-Proto" : "http",
-        "X-Forwarded-For" : "104.129.66.226",
-        "Host" : "aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com",
-        "x-envoy-expected-rq-timeout-ms" : "3000",
-        "Content-Length" : "0",
-        "x-envoy-original-path" : "/"
-        },
-        "remoteAddress" : "100.105.109.197",
-        "remotePort" : 60834,
-        "remoteHost" : "100.105.109.197",
-        "remoteUser" : null
-    }
-    * Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
-    }
+curl -k -v http://$LB_ADDR
+* Rebuilt URL to: http://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+*   Trying 52.0.246.212...
+* TCP_NODELAY set
+* Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (52.0.246.212) port 80 (#0)
+> GET / HTTP/1.1
+> Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+> User-Agent: curl/7.55.1
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< date: Tue, 31 Jul 2018 21:46:37 GMT
+< server: envoy
+< content-type: application/json;charset=utf-8
+< content-length: 764
+< x-envoy-upstream-service-time: 4
+< 
+{
+"host" : "backend-6f77f444c4-2pn79",
+"request" : {
+    "method" : "GET",
+    "path" : "/",
+    "queryParams" : {
+    "" : [ "" ]
+    },
+    "headers" : {
+    "x-request-id" : "100d49ee-21ce-4973-b481-a634dff93838",
+    "x-envoy-external-address" : "104.129.66.226",
+    "Accept" : "*/*",
+    "User-Agent" : "curl/7.55.1",
+    "X-Forwarded-Proto" : "http",
+    "X-Forwarded-For" : "104.129.66.226",
+    "Host" : "aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com",
+    "x-envoy-expected-rq-timeout-ms" : "3000",
+    "Content-Length" : "0",
+    "x-envoy-original-path" : "/"
+    },
+    "remoteAddress" : "100.105.109.197",
+    "remotePort" : 60834,
+    "remoteHost" : "100.105.109.197",
+    "remoteUser" : null
+}
+* Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+}
     ```
