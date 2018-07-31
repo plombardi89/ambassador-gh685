@@ -71,7 +71,7 @@ spec:
 
 # Issue #1
 
-Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambassador.svc.yaml`. This **SHOULD BE** the canonical way to do this on AWS
+Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambassador.svc.yaml`. This **SHOULD BE** the canonical way to do this on AWS. In the `HTTP/:80` case I was expecting a 301 or 302 redirect.
 
     ```yaml
     ---
@@ -101,10 +101,10 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
         name: tls
         config:
             server:
-            enabled: true
-            redirect_cleartext_from: 80
+                enabled: false
+                redirect_cleartext_from: 80
             client:
-            enabled: false
+                enabled: false
     spec:
     type: LoadBalancer
     ports:
@@ -193,7 +193,7 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
     }
     ```
 
-3. `curl -v http://$LB_ADDR
+3. `curl -v http://$LB_ADDR`
 
     **BAD:** No TLS handshake occurred
     
@@ -242,4 +242,233 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
     }
     * Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
     }
+    ```
+
+# Issue #2 Infinite Redirect
+
+Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambassador.svc.yaml`. The difference here between the first issue (above) is that `config.server.enabled` is now `true` which is nonsensical for two reasons:
+
+1. The docs say `enabled: true` is only for TLS termination. We are not terminating TLS on Ambassador.
+2. The docs, however, do not tell you to set `enabled: false` if you are terminating TLS at your load balancer.
+3. Therefore... what's a user to do other than try?!
+
+    ```yaml
+    ---
+    apiVersion: v1
+    kind: Service
+    metadata:
+    name: ambassador-public
+    namespace: gh685
+    annotations:
+        service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
+        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:us-east-1:914373874199:certificate/1d16f0a1-abd5-44b3-8da5-5e06c843fd3d"
+        service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+        service.beta.kubernetes.io/aws-load-balancer-proxy-protocol: "*"
+        getambassador.io/config: |
+        ---
+        apiVersion: ambassador/v0
+        kind: Module
+        name: ambassador
+        config:
+            use_proxy_proto: true
+            use_remote_address: true
+
+        ---
+        apiVersion: ambassador/v1
+        kind: Module
+        name: tls
+        config:
+            server:
+                enabled: true
+                redirect_cleartext_from: 80
+            client:
+                enabled: false
+    spec:
+    type: LoadBalancer
+    ports:
+    - name: http
+        port: 80
+        targetPort: 80
+    - name: https
+        port: 443
+        targetPort: 80
+    selector:
+        app: ambassador
+    ```
+    
+1. `export LB_ADDR=$(kubectl get svc ambassador-public -n gh685 -o=jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+2. `curl -k -v https://$LB_ADDR`
+
+    ```text
+    * Rebuilt URL to: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    *   Trying 52.0.246.212...
+    * TCP_NODELAY set
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (52.0.246.212) port 443 (#0)
+    * ALPN, offering h2
+    * ALPN, offering http/1.1
+    * Cipher selection: PROFILE=SYSTEM
+    * successfully set certificate verify locations:
+    *   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+    CApath: none
+    * TLSv1.2 (OUT), TLS handshake, Client hello (1):
+    * TLSv1.2 (IN), TLS handshake, Server hello (2):
+    * TLSv1.2 (IN), TLS handshake, Certificate (11):
+    * TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+    * TLSv1.2 (IN), TLS handshake, Server finished (14):
+    * TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+    * TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+    * TLSv1.2 (OUT), TLS handshake, Finished (20):
+    * TLSv1.2 (IN), TLS handshake, Finished (20):
+    * SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+    * ALPN, server did not agree to a protocol
+    * Server certificate:
+    *  subject: CN=*.getambassador.io
+    *  start date: May 29 00:00:00 2018 GMT
+    *  expire date: Jun 29 12:00:00 2019 GMT
+    *  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
+    *  SSL certificate verify ok.
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 21:57:42 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    ```
+    
+    Yuck... we are not redirecting on HTTPS. That's going to be a problem for an HTTP:80 redirect.
+    
+3. `curl -k -v -L https://$LB_ADDR`
+
+    If you are following along at home... the `-L` is to follow redirects and if you use it YOU WILL end up in an infinite redirect loop as HTTP redirects to HTTPS and HTTPS redirects to itself. In the below example I set `--max-redirs` for sanity reasons.
+    
+    ```
+    plombardi@plombowski ~/w/r/a/gh685> curl -k -v -L --max-redirs 5 http://$LB_ADDR
+    * Rebuilt URL to: http://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    *   Trying 52.0.246.212...
+    * TCP_NODELAY set
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (52.0.246.212) port 80 (#0)
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:15 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #0 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Issue another request to this URL: 'https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/'
+    *   Trying 34.194.124.191...
+    * TCP_NODELAY set
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.194.124.191) port 443 (#1)
+    * ALPN, offering h2
+    * ALPN, offering http/1.1
+    * Cipher selection: PROFILE=SYSTEM
+    * successfully set certificate verify locations:
+    *   CAfile: /etc/pki/tls/certs/ca-bundle.crt
+    CApath: none
+    * TLSv1.2 (OUT), TLS handshake, Client hello (1):
+    * TLSv1.2 (IN), TLS handshake, Server hello (2):
+    * TLSv1.2 (IN), TLS handshake, Certificate (11):
+    * TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+    * TLSv1.2 (IN), TLS handshake, Server finished (14):
+    * TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+    * TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+    * TLSv1.2 (OUT), TLS handshake, Finished (20):
+    * TLSv1.2 (IN), TLS handshake, Finished (20):
+    * SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+    * ALPN, server did not agree to a protocol
+    * Server certificate:
+    *  subject: CN=*.getambassador.io
+    *  start date: May 29 00:00:00 2018 GMT
+    *  expire date: Jun 29 12:00:00 2019 GMT
+    *  issuer: C=US; O=Amazon; OU=Server CA 1B; CN=Amazon
+    *  SSL certificate verify ok.
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:16 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #1 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Issue another request to this URL: 'https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/'
+    * Found bundle for host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com: 0x5649ec9b7100 [can pipeline]
+    * Re-using existing connection! (#1) with host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.194.124.191) port 443 (#1)
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:16 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #1 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Issue another request to this URL: 'https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/'
+    * Found bundle for host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com: 0x5649ec9b7100 [can pipeline]
+    * Re-using existing connection! (#1) with host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.194.124.191) port 443 (#1)
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:16 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #1 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Issue another request to this URL: 'https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/'
+    * Found bundle for host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com: 0x5649ec9b7100 [can pipeline]
+    * Re-using existing connection! (#1) with host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.194.124.191) port 443 (#1)
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:16 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #1 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Issue another request to this URL: 'https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/'
+    * Found bundle for host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com: 0x5649ec9b7100 [can pipeline]
+    * Re-using existing connection! (#1) with host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    * Connected to aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com (34.194.124.191) port 443 (#1)
+    > GET / HTTP/1.1
+    > Host: aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com
+    > User-Agent: curl/7.55.1
+    > Accept: */*
+    > 
+    < HTTP/1.1 301 Moved Permanently
+    < location: https://aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com/
+    < date: Tue, 31 Jul 2018 22:01:16 GMT
+    < server: envoy
+    < content-length: 0
+    < 
+    * Connection #1 to host aaf17f53994ff11e884fb0e884ad5c65-1982898853.us-east-1.elb.amazonaws.com left intact
+    * Maximum (5) redirects followed
+    curl: (47) Maximum (5) redirects followed
     ```
