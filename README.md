@@ -472,3 +472,21 @@ Copy and paste this into `ambassador.svc.yaml` and then `kubectl apply -f ambass
     * Maximum (5) redirects followed
     curl: (47) Maximum (5) redirects followed
     ```
+    
+# Closing Thoughts!
+
+- The Ambassador docs around AWS ELB's are confusing (https://www.getambassador.io/reference/ambassador-with-aws). As far as I am aware the below is impossible with Ambassador today. There is no way to configure multiple listeners which is essentially how the below documentation would work. I think this is perhaps some internal note that made it into docs. If this were possible you would point `ELB:443 @ Envoy-Listener:8443` and `ELB:80 @ Envoy-Listener:8080` then we would configure `Envoy-Listener:8080` to redirect all routes to `ELB:443`... But I am not sure that is even possible so I don't know why it is in the documentation.
+
+    ```text
+    Run the ELB with the following listener configuration:
+
+    :443 -> :8443 (the Envoy port doesn't matter)
+    :80 -> :8080 (the Envoy port doesn't matter)
+    Configure redirect_cleartext_from to redirect traffic on 8080 to the secure port
+    ```
+
+- The example shown for the AWS ELB config is suitable for TLS-only terminated setups because it only points `:443` backwards. We should update this with the appropriate configs AFTER we fix the existing issue.
+- Envoy v2 API seems to have a more powerful redirect mechanism: https://www.envoyproxy.io/docs/envoy/latest/api-v2/api/v2/route/route.proto#route-redirectaction
+
+
+
