@@ -25,7 +25,7 @@ metadata:
       name: tls
       config:
         server:
-          enabled: true
+          enabled: false
           redirect_cleartext_from: 80
         client:
           enabled: false

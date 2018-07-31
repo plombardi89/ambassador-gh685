@@ -6,7 +6,7 @@ As an end user I want to deploy Ambassador and the following are requirements:
 
 1. I am deploying on AWS
 1. I MUST terminate SSL/TLS at my Elastic Load Balancer.
-2. I MUST support both HTTP (:80) and HTTPS (:443) traffic.
+2. I MUST support both HTTP (:80) and HTTPS (:443) traffic. The HTTP (:80) traffic MUST BE redirected to HTTPS (:443).
 3. I MUST support websocket traffic (and therefore MUST use a L4 listener on the ELB)
 4. I MUST receive the **REAL** client IP address at my backend (and there MUST use the Proxy Protocol)
 
