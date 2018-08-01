@@ -25,7 +25,7 @@ metadata:
       name: tls
       config:
         server:
-          enabled: false
+          enabled: true
           redirect_cleartext_from: 80
         client:
           enabled: false
@@ -37,6 +37,6 @@ spec:
     targetPort: 80
   - name: https
     port: 443
-    targetPort: 80
+    targetPort: 443
   selector:
     app: ambassador

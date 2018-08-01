@@ -37,6 +37,9 @@ spec:
                 fieldPath: metadata.namespace
           - name: SCOUT_DISABLE
             value: "1"
+          ports:
+          - containerPort: 443
+          - containerPort: 80
           livenessProbe:
             httpGet:
               path: /ambassador/v0/check_alive
@@ -124,7 +127,7 @@ metadata:
       apiVersion: ambassador/v0
       kind: Mapping
       name: backend-http
-      prefix: /
+      prefix: /backend
       service: backend
       ---
       apiVersion: ambassador/v0
@@ -167,3 +170,46 @@ spec:
           ports:
             - name: http-api
               containerPort: 7000
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: statsd-sink
+  namespace: gh685
+spec:
+  replicas: 1
+  strategy: {}
+  selector:
+    matchLabels:
+      service: statsd-sink
+  template:
+    metadata:
+      labels:
+        service: statsd-sink
+    spec:
+      containers:
+      - name: statsd-sink
+        image: hopsoft/graphite-statsd:latest
+        resources: {}
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: statsd-sink
+  name: statsd-sink
+  namespace: gh685
+spec:
+  ports:
+  - protocol: UDP
+    port: 8125
+    name: statsd-metrics
+  - protocol: TCP
+    port: 80
+    name: graphite-www
+  selector:
+    service: statsd-sink
+
